@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="Mesa solo de D&D 5e com estado determinístico em Python e narração via Gemini.">
+	<title>Mestre de D&D</title>
+	<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+	<header>
+		<h1>Mestre de D&D</h1>
+		<nav>
+			<ul>
+				<li><button type="button" id="btn-nav-campanhas" class="nav-btn" aria-label="Ver campanhas">Campanhas</button></li>
+				<li><button type="button" id="btn-nav-nova" class="nav-btn" aria-label="Criar nova campanha">Nova Campanha</button></li>
+			</ul>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<div id="alerta-api" class="alerta oculto">
+			Chave <code>GEMINI_API_KEY</code> não configurada no <code>.env</code>. Configure a chave para gerar narrações do Mestre.
+		</div>
+
+		<section id="tela-inicio">
+			<div class="hero-banner">
+				<h2>Crônicas Solo</h2>
+				<p class="subtitulo">Dados e ficha validados em código. Mundo conduzido por IA.</p>
+			</div>
+
+			<div class="grade-inicio">
+				<article id="card-nova-campanha">
+					<h1>Nova Campanha</h1>
+					<form id="form-nova-campanha">
+						<label for="input-nome">Nome do Personagem</label>
+						<input id="input-nome" type="text" required maxlength="60" placeholder="Ex: Aldric">
+
+						<label for="input-titulo">Título da Campanha (opcional)</label>
+						<input id="input-titulo" type="text" maxlength="100" placeholder="Ex: A Torre de Cinzas">
+
+						<label for="select-classe">Classe (Nível 1)</label>
+						<select id="select-classe"></select>
+
+						<div id="previa-classe" class="previa-classe"></div>
+
+						<label for="input-cenario">Cenário Inicial</label>
+						<textarea id="input-cenario" rows="3" maxlength="300">Fantasia clássica em uma vila de fronteira cercada por ruínas antigas.</textarea>
+
+						<button type="submit" id="btn-criar-campanha" class="btn-primario">Iniciar Aventura</button>
+					</form>
+				</article>
+
+				<article id="card-campanhas-salvas">
+					<h1>Campanhas Salvas</h1>
+					<div id="lista-campanhas" class="lista-campanhas"></div>
+				</article>
+			</div>
+		</section>
+
+		<section id="tela-mesa" class="oculto">
+			<div class="mesa-layout">
+				<article class="painel-cronica">
+					<div class="topo-cronica">
+						<div>
+							<h1 id="mesa-titulo">Campanha</h1>
+							<p id="mesa-local" class="local-atual">Local: —</p>
+						</div>
+					</div>
+
+					<div id="historico-turnos" class="historico-turnos"></div>
+
+					<div id="caixa-teste" class="caixa-teste oculto">
+						<h2>Teste Exigido</h2>
+						<p id="teste-motivo"></p>
+						<p id="teste-detalhes" class="teste-detalhes"></p>
+						<div class="controles-teste">
+							<button type="button" id="btn-rolar-d20" class="btn-primario">Rolar 1d20</button>
+							<input id="input-dado-manual" type="number" min="1" max="20" placeholder="Dado físico (1-20)">
+							<button type="button" id="btn-enviar-manual" class="btn-secundario">Usar Valor</button>
+						</div>
+					</div>
+
+					<form id="form-acao" class="form-acao">
+						<label for="input-acao">Sua Ação</label>
+						<textarea id="input-acao" rows="3" maxlength="1000" placeholder="Descreva o que seu personagem faz ou diz..." required></textarea>
+						<div class="barra-enviar">
+							<span id="status-envio" class="status-envio"></span>
+							<button type="submit" id="btn-enviar-acao" class="btn-primario">Agir</button>
+						</div>
+					</form>
+				</article>
+
+				<aside class="painel-ficha">
+					<article>
+						<h1 id="ficha-nome">Personagem</h1>
+						<p id="ficha-subtitulo" class="ficha-subtitulo"></p>
+
+						<div class="bloco-pv">
+							<div class="pv-texto">
+								<span>Pontos de Vida</span>
+								<strong id="ficha-pv">0 / 0</strong>
+							</div>
+							<div class="barra-pv-fundo">
+								<div id="barra-pv-preenchimento" class="barra-pv-preenchimento"></div>
+							</div>
+						</div>
+
+						<div class="status-secundarios">
+							<div class="caixa-stat">
+								<span>CA</span>
+								<strong id="ficha-ca">10</strong>
+							</div>
+							<div class="caixa-stat">
+								<span>Ouro (PO)</span>
+								<strong id="ficha-ouro">0</strong>
+							</div>
+						</div>
+
+						<h2>Atributos</h2>
+						<div id="grade-atributos" class="grade-atributos"></div>
+
+						<h2>Inventário</h2>
+						<ul id="lista-inventario" class="lista-inventario"></ul>
+
+						<h2>Dados Livres</h2>
+						<div class="grade-dados">
+							<button type="button" class="btn-dado" data-lados="4">d4</button>
+							<button type="button" class="btn-dado" data-lados="6">d6</button>
+							<button type="button" class="btn-dado" data-lados="8">d8</button>
+							<button type="button" class="btn-dado" data-lados="10">d10</button>
+							<button type="button" class="btn-dado" data-lados="12">d12</button>
+							<button type="button" class="btn-dado" data-lados="20">d20</button>
+						</div>
+						<p id="resultado-dado-livre" class="resultado-dado-livre"></p>
+					</article>
+				</aside>
+			</div>
+		</section>
+	</main>
+
+	<footer>
+		<p>Mestre de D&D — Motor determinístico em FastAPI + Gemini</p>
+	</footer>
+
+	<script src="/static/app.js"></script>
+</body>
+</html>
